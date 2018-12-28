@@ -71,7 +71,7 @@ initial_state=Creatinitial_state(DC)
 
 
 
-for ii in range(1):
+for ii in range(n_try):
     setup0=Createsetup([action[jj] for jj in exp_list[ii]],initial_state)
     state0=sp.expand(sp.sympify(setup0,locals=mydict))
     final_state=toolbox.Postselect(state0,[a,b,c,d],[0,1])
