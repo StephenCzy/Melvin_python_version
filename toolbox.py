@@ -122,26 +122,3 @@ def SRV(psi):
     if rho==0 :return [0,0,0]
     else: return sorted([partialtrace3(rho,1),partialtrace3(rho,2),partialtrace3(rho,3)],reverse=True)
     
-'''
-psi=sp.expand((a[0,V]*b[0,V]+a[1,V]*b[-1,V]+a[-1,V]*b[1,V]+c[0,V]*d[0,V]+c[1,V]*d[-1,V]+c[-1,V]*d[1,V])**2)
-#psi=a[0, V]*b[0, V]*c[0, V]*d[0, V] + a[0, V]*b[0, V]*c[1, V]*d[-1, V] + a[0, V]*b[0, V]*c[-1, V]*d[1, V] + a[1, V]*b[-1, V]*c[0, V]*d[0, V] +a[-1, V]*b[1, V]*c[0, V]*d[0, V] + a[1, V]*b[-1, V]*c[1, V]*d[-1, V] + a[1, V]*b[-1, V]*c[-1, V]*d[1, V] + a[-1, V]*b[1, V]*c[1, V]*d[-1, V] + a[-1, V]*b[1, V]*c[-1, V]*d[1, V]
-r1=LI(psi,b,c)
-
-r2=Reflection(r1,a)
-r3=OAMHolo(r2,a,-2)
-r4=BS(r3,a,c)
-print(r4)
-
-psi0=a[-1, V]**2*b[1, V]**2 + 2*a[-1, V]*a[0, 0]*b[0, 0]*b[1, V] + 2*a[-1, V]*a[1, V]*b[-1, V]*b[1, V] + 2*a[-1, V]*b[1, V]*c[0, 0]*d[0, 0] + a[0, 0]**2*b[0, 0]**2 + 2*a[0, 0]*a[1, V]*b[-1, V]*b[0, 0] + 2*a[0, 0]*b[0, 0]*c[0, 0]*d[0, 0] + a[1, V]**2*b[-1, V]**2 + 2*a[1, V]*b[-1, V]*c[0, 0]*d[0, 0] + c[0, 0]**2*d[0, 0]**2
-r1=DP(psi0,d,1)
-print(r1)
-r2=OAMHoloSP(r1,a,1)
-print(r2)
-r4=OAMHoloSP(LI(OAMHoloSP(BS(r2,c,d),a,1),a,c),b,1)
-print(r4)
-r5=Postselect(r4,[a,b,c,d],[1,0])
-print(r5)
-
-print(SRV(r5))
-
-'''
