@@ -176,33 +176,25 @@ xxTime = AbsoluteTime[];
 iiCount = 0;
 SizeOfAllList = 1000000;
 For[iiLoop = 0, iiLoop <= 1000000000, iiLoop++,
-  (*iiNum is the number of optical elements per setup. 
-  Here we first calculate 1.000.000 with size 6, 
-  then 1.000.000 with size 7, ... up to 15 elements*)
+(*iiNum is the number of optical elements per setup.  Here we first calculate 1.000.000 with size 6, then 1.000.000 with size 7, ... up to 15 elements*)
   iiNum = Mod[iiLoop, 10] + 6; 
   
   
-  (*Here we create 1.000.000 random setups, 
-  which will be distributed to the different kernels of Mathematica. 
-  The setups are descript as sequence of numbers, 
-  which later are replaced by optical elements. *)
+(*Here we create 1.000.000 random setups, which will be distributed to the different kernels of Mathematica. The setups are descript as sequence of numbers, which later are replaced by optical elements. *)
   AllListNum = 
    RandomChoice[Range[Length[Actions]], {SizeOfAllList, iiNum}];
   ParallelTable[
    
-   (*TimeConstrained in case that some setups need too much time; 
-   it is set to 30sec per setup*)
+(*TimeConstrained in case that some setups need too much time; it is set to 30sec per setup*)
    TimeConstrained[
-     (* hack as those functions are not defined within the module, 
-     in the ToExpression :-o *)
+     (* hack as those functions are not defined within the module, in the ToExpression :-o *)
      ExistLI = ValueQ[LI[xx1, b1, c1]];
      ExistBS = ValueQ[BS[xx1, b1, c1]];
      ExistDP = ValueQ[DP[xx1, b1]];
      ExistRef = ValueQ[Reflection[xx1, b1]];
      ExistHolo = ValueQ[OAMHolo[xx1, a1, 1]];
      
-     (*Here the representation of the setup (in numbers) is changed \
-to a string with the actual function-calls*)
+(*Here the representation of the setup (in numbers) is changed to a string with the actual function-calls*)
      SetupList = AddToList[AllListNum[[iiLists]]];
      SetupStr = 
       StringReplace[ToString[SetupList], 
@@ -212,40 +204,28 @@ to a string with the actual function-calls*)
      SetupStr = 
       StringReplace[SetupStr, "}" -> FromCharacterCode[{34, 125}]];
      
-     (*FuncStr will contain one Mathematica string that can be \
-executed, which is a sequence of optical elements.*)
+(*FuncStr will contain one Mathematica string that can be executed, which is a sequence of optical elements.*)
      FuncStr = 
       StringReplace[ChangeToString[SetupList], "XXX" -> "DCState"];
      
      
-     (*Our initial state here is always a SPDC process, 
-     that creates two pairs of OAM-entangled photons - i.e. 
-     four photons. Of course this can be done dynamically aswell - 
-     but for simplicity let's have the initial state static.*)
+(*Our initial state here is always a SPDC process, that creates two pairs of OAM-entangled photons - i.e. four photons. Of course this can be done dynamically aswell - but for simplicity let's have the initial state static.*)
      DCState = (DownConv[1, a, b] + DownConv[1, c, d])^2;
      
-     (*ToExpression executes the actions of the optical elements. 
-     That means, 
-     the variable "yy" contains the output state of the optical \
-setup.*)
+(*ToExpression executes the actions of the optical elements. That means, the variable "yy" contains the output state of the optical setup.*)
      yy = Expand[ToExpression[FuncStr]];
      
-     (*We perform four-fold coincidence post-selection. I.e. 
-     only when all four detectors fire at the same time, 
-     the state is considered valid. (This is commonly used in quantum \
-optical experiments, and can be used together with teleportation, 
-     MBQComputation,...) *)
+(*We perform four-fold coincidence post-selection. I.e. only when all four detectors fire at the same time,  the state is considered valid. (This is commonly used in quantum optical experiments, and can be used together with teleportation, MBQComputation,...) *)
      vv = MakeFF2[yy];
      
-     (*We use the photon in path A as a trigger. 
-     There are many trigger combinations, and we analyse them now.*)
+(*We use the photon in path A as a trigger. There are many trigger combinations, and we analyse them now.*)
      AllTypesOfFF1 = DeleteDuplicates[Cases[vv, _FF1, {0, Infinity}]];
      AllComb = Subsets[AllTypesOfFF1];
      
-     (*kkQ is a loop over all trigger combinations from path A*)
+(*kkQ is a loop over all trigger combinations from path A*)
      For[kkQ = 2, kkQ <= Length[AllComb], kkQ++, 
       ReducedVV = vv;
-      (*Here we apply the trigger. ReducedVV is the triggered state. *)
+(*Here we apply the trigger. ReducedVV is the triggered state. *)
 
       
       For[mmQ = 1, mmQ <= Length[AllComb[[kkQ]]], mmQ++,
@@ -254,12 +234,10 @@ optical experiments, and can be used together with teleportation,
       ReducedVV = Block[{FF1}, FF1[l_] = 0; ReducedVV];
       
       
-      (*Terms is the number of terms in the coherent superposition of \
-the remaining three-photon state*)
+(*Terms is the number of terms in the coherent superposition of the remaining three-photon state*)
       Terms = Cases[ReducedVV, _FF2, {0, Infinity}];
       
-      (*AllTypesOfFF2-4 is the number of different modes in the \
-photons in path B,C,D, respectively.*)
+(*AllTypesOfFF2-4 is the number of different modes in the photons in path B,C,D, respectively.*)
       AllTypesOfFF2 = 
        DeleteDuplicates[Cases[ReducedVV, _FF2, {0, Infinity}]];
       AllTypesOfFF3 = 
@@ -267,15 +245,13 @@ photons in path B,C,D, respectively.*)
       AllTypesOfFF4 = 
        DeleteDuplicates[Cases[ReducedVV, _FF4, {0, Infinity}]];
       
-      (*We want maximally entangled states. That means:
-      I) The number of terms has to be as large as max(AllTypesOfFF2,
-      AllTypesOfFF3,AllTypesOfFF4) 
-      II) The coefficients of all terms have to be the same. 
-      This garantees that the OAM-
-      computation basis is the Schmidt basis. 
-      It is a restriction which makes analysation of the states much \
-easier (but it would not be neccessary per se).
-      *)
+(*
+We want maximally entangled states. That means:
+     I) The number of terms has to be as large as max(AllTypesOfFF2,
+        AllTypesOfFF3,AllTypesOfFF4) 
+     II) The coefficients of all terms have to be the same. 
+        This garantees that the OAM-computation basis is the Schmidt basis. It is a restriction which makes analysation of the states much easier (but it would not be neccessary per se).
+*)
       DimVecEncode = 
        Sort[{Length[AllTypesOfFF2], Length[AllTypesOfFF3], 
          Length[AllTypesOfFF4]}, Greater];
@@ -286,38 +262,22 @@ easier (but it would not be neccessary per se).
       InfoLetter = InfoLetter1 <> InfoLetter2;
       
       
-      (*We continue only if the state is indeed maximally entangled \
-and genuinly 3-partite entangled. These are neccessary criteria, 
-      but not sufficient. However, 
-      we can get rid of many potential states here, 
-      thus do not have to calculate the time-
-      consuming SchmidtRankVector function*)
+(*We continue only if the state is indeed maximally entangled and genuinly 3-partite entangled. These are neccessary criteria, but not sufficient. However, we can get rid of many potential states here, thus do not have to calculate the time-consuming SchmidtRankVector function*)
       If[(DimVecEncode[[3]] > 1 && InfoLetter == "_OKTerms_MaxEnt"),
        
-       (*After these initial checks, we calculate the very time-
-       expensive SchmidtRankVector function*)
+(*After these initial checks, we calculate the very time-expensive SchmidtRankVector function*)
        DimVec = SchmidtRankVector[ReducedVV];
        
-       (*Now we have the sufficient criteria: 
-       When the last entry of the 3-dimensional vector is one, 
-       it means that the state is bi-separable. We dont want that. 
-       Also if the number of terms does not coincide with the first \
-entry of the SRV, we dont want to consider the state.*)
+(*Now we have the sufficient criteria: When the last entry of the 3-dimensional vector is one, it means that the state is bi-separable. We dont want that. Also if the number of terms does not coincide with the first entry of the SRV, we dont want to consider the state.*)
        If[DimVec[[3]] > 1 && Length[Terms] == DimVec[[1]],
         
-        (*We found a good canditate state. However, 
-        we need to check whether higher-
-        order terms from SPDC could be fatal for the state. 
-        We do that by calculating the same function with an 11-
-        dimensional state (from -5 to +5). 
-        If the state does not change, we have a good state.*)
+(*We found a good canditate state. However, we need to check whether higher-order terms from SPDC could be fatal for the state. We do that by calculating the same function with an 11-dimensional state (from -5 to +5). If the state does not change, we have a good state.*)
         DCState = (DownConv[5, a, b] + DownConv[5, c, d])^2;
         yyHO = Expand[ToExpression[FuncStr]];
         vvHO = MakeFF2[yyHO];
         ReducedVVHO = vvHO;
         
-        (*We only consider the space where the initial state was \
-defined*)
+(*We only consider the space where the initial state was defined*)
         For[mmHO = 1, mmHO <= Length[AllComb[[kkQ]]], mmHO++,
          ReducedVVHO = ReducedVVHO /. AllComb[[kkQ]][[mmHO]] -> 1;
          ];
@@ -344,9 +304,7 @@ defined*)
          ReducedVVHO = ReducedVVHO /. ComplementDC4[[mm]] -> 0;
          ];
         
-        (*If the original state is the same as the higher-
-        order state (i.e. the higher-
-        orders do not disturb the created state) we have a good \
+(*If the original state is the same as the higher-order state (i.e. the higher-orders do not disturb the created state) we have a good \
 state, which we will report*)
         If[ReducedVV == ReducedVVHO,
          InformationString = 
