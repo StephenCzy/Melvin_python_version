@@ -31,6 +31,12 @@ BibTex:
 # SimpleMelvinExamples 
 from Dr. Mario Krenn https://mariokrenn.wordpress.com/
 
+# codes
+```
+	SimpleHOMExample.nb
+	CalcSRV.nb
+```
+
 # more infromation
 ```
 Mario Krenn, Mehul Malik, Robert Fickler, Radek Lapkiewicz, and Anton Zeilinger. Automated search for new quantum experiments. Physical Review Letters, 116(9):090405, 2016.
@@ -49,8 +55,4 @@ BibTex:
 
 ```
 
-# codes
-```
-	SimpleHOMExample.nb
-	CalcSRV.nb
-```
+
