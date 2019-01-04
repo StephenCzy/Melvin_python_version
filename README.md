@@ -1,4 +1,4 @@
-SimpleMelvinExamples from Dr. Mario Krenn 
+
 
 https://mariokrenn.wordpress.com/
 
@@ -26,8 +26,9 @@ BibTex:
 }
 
 
-# SimpleMelvinExamples from Dr. Mario Krenn 
-![Docker Build Status](https://img.shields.io/docker/build/jrottenberg/ffmpeg.svg)
+# SimpleMelvinExamples 
+from Dr. Mario Krenn 
+![Docker Build Status](https://mariokrenn.wordpress.com/)
 
 # Installation
 ```
