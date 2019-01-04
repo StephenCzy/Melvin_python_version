@@ -1,7 +1,8 @@
 (*
 This is a simplified version of a code that we have used in PRL 116, 090405 (2016).
 
-The program finds experimental implementations of maximally entangled high-dimensional multi-partite states. More detailed, we use the characterization of the states according to Phys. Rev. Lett. 110, 030501 (2013) - which are called Schmidt-Rank-Vector states.
+The program finds experimental implementations of maximally entangled high-dimensional multi-partite states. 
+More detailed, we use the characterization of the states according to Phys. Rev. Lett. 110, 030501 (2013) - which are called Schmidt-Rank-Vector states.
 
 The structure of the code is as follows. It contains two Mathematica-input cells.
 The first cell defines all relevant functions, such as the symbolic definitions of all optical elements, the calculations of the Schmidt-Rank-Vector of an imput state, etc.
