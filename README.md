@@ -31,18 +31,22 @@ BibTex:
 # SimpleMelvinExamples 
 from Dr. Mario Krenn https://mariokrenn.wordpress.com/
 
-# Two examples in mathematica version
+# more infromation
 ```
-	docker pull westernmagic/quid:2018
-	# See docker create --help for details
-	docker create \
-		--interactive \
-		--tty \
-		--publish 8888:8888 \
-		--restart unless-stopped \
-		--volume $(pwd):/root/share \
-		--name quid_2018 \
-		westernmagic/quid:2018
+Mario Krenn, Mehul Malik, Robert Fickler, Radek Lapkiewicz, and Anton Zeilinger. Automated search for new quantum experiments. Physical Review Letters, 116(9):090405, 2016.
+
+BibTex:
+@article{krenn2016automated,
+  title={Automated search for new quantum experiments},
+  author={Krenn, Mario and Malik, Mehul and Fickler, Robert and Lapkiewicz, Radek and Zeilinger, Anton},
+  journal={Physical review letters},
+  volume={116},
+  number={9},
+  pages={090405},
+  year={2016},
+  publisher={APS}
+}
+
 ```
 
 # codes
