@@ -303,8 +303,7 @@ We want maximally entangled states. That means:
          ReducedVVHO = ReducedVVHO /. ComplementDC4[[mm]] -> 0;
          ];
         
-(*If the original state is the same as the higher-order state (i.e. the higher-orders do not disturb the created state) we have a good \
-state, which we will report*)
+(*If the original state is the same as the higher-order state (i.e. the higher-orders do not disturb the created state) we have a good state, which we will report*)
         If[ReducedVV == ReducedVVHO,
          InformationString = 
           ToString[DimVec] <> " | " <> SetupStr <> " | " <> 
