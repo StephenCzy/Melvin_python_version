@@ -105,8 +105,7 @@ NumberOfDiffCoef[expr_] := (
   )
 
 
-(*Experiment representation as String or as List - To change from one \
-to the other*)
+(*Experiment representation as String or as List - To change from one to the other*)
 ChangeToList[FuncStrC_] :=
  (
   functsC = Delete[StringSplit[FuncStrC, "["], -1];
