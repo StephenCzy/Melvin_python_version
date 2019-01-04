@@ -26,7 +26,7 @@ BibTex:
 }
 
 
-# Quantum Information for Developers
+# SimpleMelvinExamples from Dr. Mario Krenn 
 ![Docker Build Status](https://img.shields.io/docker/build/jrottenberg/ffmpeg.svg)
 
 # Installation
