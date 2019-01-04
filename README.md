@@ -6,7 +6,9 @@ SimpleHOMExample.nb
 
 This program shows how to work with quantum states, and how the symbolic transformations work.
 
-CalcSRV.nb
+
+
+
 
 This is a full version which searches for 3-particle high-dimensionally entanged states with existing optical elements.
 
@@ -27,10 +29,9 @@ BibTex:
 
 
 # SimpleMelvinExamples 
-from Dr. Mario Krenn 
-![Docker Build Status](https://mariokrenn.wordpress.com/)
+from Dr. Mario Krenn https://mariokrenn.wordpress.com/
 
-# Installation
+# Two examples in mathematica version
 ```
 	docker pull westernmagic/quid:2018
 	# See docker create --help for details
@@ -44,8 +45,8 @@ from Dr. Mario Krenn
 		westernmagic/quid:2018
 ```
 
-# Running
+# codes
 ```
-	docker start  quid_2018
-	docker attach quid_2018
+	SimpleHOMExample.nb
+	CalcSRV.nb
 ```
