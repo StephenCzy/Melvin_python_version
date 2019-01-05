@@ -1,0 +1,328 @@
+(*
+This is a simplified version of a code that we have used in PRL 116, 090405 (2016).
+
+The program finds experimental implementations of maximally entangled high-dimensional multi-partite states. 
+More detailed, we use the characterization of the states according to Phys. Rev. Lett. 110, 030501 (2013) - which are called Schmidt-Rank-Vector states.
+
+The structure of the code is as follows. It contains two Mathematica-input cells.
+The first cell defines all relevant functions, such as the symbolic definitions of all optical elements, the calculations of the Schmidt-Rank-Vector of an imput state, etc.
+
+The second cell is the actual search algorithm. It creates a large number of random experimental configurations, which are executed (in a parallelized way), the output state is calculated and the property of the state is analysed. We start with an initial state that we can easily create in the laboratory (two pairs of photons, which are each three-dimensionally entangled in the orbital-angular momentum DoF). One of the photons will be used as a trigger for the other the other three photons. If the remaining three-photon state fulfills our criteria (maximally entangled, SRV state, higher-order creations from SPDC do not modify the state), then it is reported in a text-file.
+
+For some simple examples of the symbolic transformations of the states, please see SimpleHOMExample.nb.
+
+This code does not contain the simplification of the experiments (which can be done by applying in sequence one of several simplification rules until the Experiment does not change anymore), and it does not contain the simple learning algorithm (which added successful trials - i.e. setups that produce states which fulfill our criteria - to the list of available Actions).
+
+by Mario Krenn (mario.krenn@univie.ac.at)
+*)
+
+
+DownConv[l_, a_, b_] := \!\(
+\*UnderoverscriptBox[\(\[Sum]\), \(m = \(-l\)\), \(l\)]\((a[m]*
+    b[\(-m\)])\)\)
+BS[expr_, a_, b_] := 
+ expr /. {a[l_] -> (b[l] + I*a[-l])/Sqrt[2], 
+   b[l_] -> (a[l] + I*b[-l])/Sqrt[2]}
+
+LI[expr_, a_, b_] := 
+ expr /. {a[l_] -> (Cos[l*Pi/2])^2*a[l] + I*(Sin[l*Pi/2])^2*b[-l], 
+   b[l_] -> -(Cos[l*Pi/2])^2*b[l] + (Sin[l*Pi/2])^2*I*a[-l]} 
+Reflection[expr_, a_] := expr /. a[l_] -> I*a[-l]
+OAMHolo[expr_, a_, n_] := expr /. a[l_] -> a[l + n]
+DP[expr_, a_] := expr /. {a[l_] -> I*Exp[I*\[Pi]*l]*a[-l]}
+
+
+
+
+(*For calculating the Schmidt-Rank Vector*)
+TraceA[rho2_] := 
+ Block[{HH}, 
+  HH[a_, b_, c_, d_, e_, f_] = KroneckerDelta[a, d]*FF[b, c]*GG[e, f];
+   rho2]
+TraceB[rho2_] := 
+ Block[{HH}, 
+  HH[a_, b_, c_, d_, e_, f_] = KroneckerDelta[b, e]*FF[a, c]*GG[d, f];
+   rho2]
+TraceC[rho2_] := 
+ Block[{HH}, 
+  HH[a_, b_, c_, d_, e_, f_] = KroneckerDelta[c, f]*FF[a, b]*GG[d, e];
+   rho2]
+
+DensityMatrix[state_] := 
+ With[{sa = CoefficientArrays[state, Sort@Variables@state][[3]]}, 
+  Normal@sa[[##]] & @@ (Min@# ;; Max@# &) /@ (sa@
+       "NonzeroPositions"\[Transpose])]
+
+SchmidtRank[
+  state_] := (If[Length[state] > 0, DMin = DensityMatrix[state]; 
+   If[Length[DMin] > 0, MatrixRank[DMin], 0], 0])
+
+SchmidtRankVector[psiin_] := (
+  psi2in = psiin /. {FF2 -> GG2, FF3 -> GG3, FF4 -> GG4};
+  rho = Expand[
+     psiin*ComplexExpand[Conjugate[psi2in]]] /. {FF2[l1_]*FF3[l2_]*
+       FF4[l3_]*GG2[l4_]*GG3[l5_]*GG4[l6_] -> 
+      HH[l1, l2, l3, l4, l5, l6]};
+  SRV = Sort[{SchmidtRank[TraceA[rho]], SchmidtRank[TraceB[rho]], 
+     SchmidtRank[TraceC[rho]]}, Greater];
+  Return[SRV];
+  )
+
+
+(*Makes the four-fold post-selection*)
+MakeFF2[expr_] := 
+ Expand[expr] /. {(a[l1_]*b[l2_]*c[l3_]*d[l4_]) -> 
+    FF1[l1]*FF2[l2]*FF3[l3]*FF4[l4], a[l1_]*a[l2_] -> 0, 
+   b[l3_]*b[l4_] -> 0, c[l5_]*c[l6_] -> 0, d[l7_]*d[l8_] -> 0, 
+   a[l1_]^n_ -> 0, b[l1_]^n_ -> 0, c[l1_]^n_ -> 0, d[l1_]^n_ -> 0, 
+   e[l1_] -> 0, f[l1_] -> 0}
+
+
+
+(*Misc functions for simpler calculations*)
+PossibleComb = {{1, 2}, {1, 3}, {1, 4}, {1, 5}, {1, 6}, {2, 3}, {2, 
+    4}, {2, 5}, {2, 6}, {3, 4}, {3, 5}, {3, 6}, {4, 5}, {4, 6}, {5, 
+    6}};
+
+PossibleCombSmall = {{1, 2}, {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4}};
+
+PosCombABCD[n_] := 
+ PossibleComb[[n]] /. {1 -> a, 2 -> b, 3 -> c, 4 -> d, 5 -> e, 6 -> f}
+PosCombABCDSmall[n_] := 
+ PossibleCombSmall[[n]] /. {1 -> a, 2 -> b, 3 -> c, 4 -> d, 5 -> e, 
+   6 -> f}
+FromNumToABCD[n_] := 
+ n /. {1 -> a, 2 -> b, 3 -> c, 4 -> d, 5 -> e, 6 -> f}
+
+CoeffList[
+   expr_] := ({expr /. Plus -> List}) /. {FF2[a_] -> 1, FF3[b_] -> 1, 
+     FF4[c_] -> 1} // Flatten;
+
+NumberOfDiffCoef[expr_] := (
+  NODCList = CoeffList[expr];
+  If[Length[NODCList] > 0,
+   Return[Length[DeleteDuplicates[Abs[NODCList]]]], 
+   ReturnExpressionPacket[0]];
+  )
+
+
+(*Experiment representation as String or as List - To change from one to the other*)
+ChangeToList[FuncStrC_] :=
+ (
+  functsC = Delete[StringSplit[FuncStrC, "["], -1];
+  argsC = Delete[StringSplit[FuncStrC, "]"], 1];
+  KlammAufC = StringPosition[FuncStrC, {"["}][[-1, 1]] + 1;
+  KlammZuC = StringPosition[FuncStrC, {"]"}][[1, 1]];
+  StartStringC = StringTake[FuncStrC, {KlammAufC, KlammZuC}];
+  
+  FullTrafosC = {};
+  For[iiC = 1, iiC <= Length[argsC], iiC++,
+   zzC = functsC[[iiC]] <> "[XXX" <> argsC[[-iiC]] <> "]";
+   PrependTo[FullTrafosC, zzC];
+   ];
+  PrependTo[FullTrafosC, functsC[[-1]] <> "[" <> StartStringC];
+  Return[FullTrafosC];
+  )
+
+ChangeToString[FuncStrC_] :=
+ (
+  YYY = "XXX";
+  For[iii = Length[FuncStrC], iii >= 1, iii--,
+   YYY = StringReplace[YYY, "XXX" -> FuncStrC[[iii]]];
+   ];
+  Return[YYY];
+  )
+
+
+(*Actions contain all optical Elements available*)
+DefineActions[] := (
+   Actions = {};
+   For[ii = 1, ii <= Length[PossibleComb], ii++,
+    PosA = PosCombABCD[ii][[1]];
+    PosB = PosCombABCD[ii][[2]];
+    AppendTo[Actions, 
+     "BS[XXX," <> ToString[PosA] <> "," <> ToString[PosB] <> "]"];
+    AppendTo[Actions, 
+     "LI[XXX," <> ToString[PosA] <> "," <> ToString[PosB] <> "]"];
+    ];
+   For[ii = 1, ii <= 6, ii++,
+    PosA = FromNumToABCD[ii];
+    AppendTo[Actions, "Reflection[XXX," <> ToString[PosA] <> "]"];
+    AppendTo[Actions, "DP[XXX," <> ToString[PosA] <> "]"];
+    HoloList = {-5, -4, -3, -2, -1, 1, 2, 3, 4, 5};
+    For[jj = 1, jj <= Length[HoloList], jj++,
+     AppendTo[Actions, 
+       "OAMHolo[XXX," <> ToString[PosA] <> "," <> 
+        ToString[HoloList[[jj]]] <> "]"];
+     ];
+    ]);
+
+
+AddToList[list_] := (
+  rvATL = {};
+  For[iiATL = 1, iiATL <= Length[list], iiATL++,
+   AppendTo[rvATL, Actions[[list[[iiATL]]]]];
+   ];
+  Return[rvATL]
+  )
+
+
+
+directoryname = NotebookDirectory[];
+DefineActions[];
+SeedRandom[]
+xxTime = AbsoluteTime[];
+
+iiCount = 0;
+SizeOfAllList = 1000000;
+For[iiLoop = 0, iiLoop <= 1000000000, iiLoop++,
+(*iiNum is the number of optical elements per setup.  Here we first calculate 1.000.000 with size 6, then 1.000.000 with size 7, ... up to 15 elements*)
+  iiNum = Mod[iiLoop, 10] + 6; 
+  
+  
+(*Here we create 1.000.000 random setups, which will be distributed to the different kernels of Mathematica. The setups are descript as sequence of numbers, which later are replaced by optical elements. *)
+  AllListNum = 
+   RandomChoice[Range[Length[Actions]], {SizeOfAllList, iiNum}];
+  ParallelTable[
+   
+(*TimeConstrained in case that some setups need too much time; it is set to 30sec per setup*)
+   TimeConstrained[
+     (* hack as those functions are not defined within the module, in the ToExpression :-o *)
+     ExistLI = ValueQ[LI[xx1, b1, c1]];
+     ExistBS = ValueQ[BS[xx1, b1, c1]];
+     ExistDP = ValueQ[DP[xx1, b1]];
+     ExistRef = ValueQ[Reflection[xx1, b1]];
+     ExistHolo = ValueQ[OAMHolo[xx1, a1, 1]];
+     
+(*Here the representation of the setup (in numbers) is changed to a string with the actual function-calls*)
+     SetupList = AddToList[AllListNum[[iiLists]]];
+     SetupStr = 
+      StringReplace[ToString[SetupList], 
+       ", " -> FromCharacterCode[{34, 44, 32, 34}]];
+     SetupStr = 
+      StringReplace[SetupStr, "{" -> FromCharacterCode[{123, 34}]];
+     SetupStr = 
+      StringReplace[SetupStr, "}" -> FromCharacterCode[{34, 125}]];
+     
+(*FuncStr will contain one Mathematica string that can be executed, which is a sequence of optical elements.*)
+     FuncStr = 
+      StringReplace[ChangeToString[SetupList], "XXX" -> "DCState"];
+     
+     
+(*Our initial state here is always a SPDC process, that creates two pairs of OAM-entangled photons - i.e. four photons. Of course this can be done dynamically aswell - but for simplicity let's have the initial state static.*)
+     DCState = (DownConv[1, a, b] + DownConv[1, c, d])^2;
+     
+(*ToExpression executes the actions of the optical elements. That means, the variable "yy" contains the output state of the optical setup.*)
+     yy = Expand[ToExpression[FuncStr]];
+     
+(*We perform four-fold coincidence post-selection. I.e. only when all four detectors fire at the same time,  the state is considered valid. (This is commonly used in quantum optical experiments, and can be used together with teleportation, MBQComputation,...) *)
+     vv = MakeFF2[yy];
+     
+(*We use the photon in path A as a trigger. There are many trigger combinations, and we analyse them now.*)
+     AllTypesOfFF1 = DeleteDuplicates[Cases[vv, _FF1, {0, Infinity}]];
+     AllComb = Subsets[AllTypesOfFF1];
+     
+(*kkQ is a loop over all trigger combinations from path A*)
+     For[kkQ = 2, kkQ <= Length[AllComb], kkQ++, 
+      ReducedVV = vv;
+(*Here we apply the trigger. ReducedVV is the triggered state. *)
+
+      
+      For[mmQ = 1, mmQ <= Length[AllComb[[kkQ]]], mmQ++,
+       ReducedVV = ReducedVV /. AllComb[[kkQ]][[mmQ]] -> 1;
+       ];
+      ReducedVV = Block[{FF1}, FF1[l_] = 0; ReducedVV];
+      
+      
+(*Terms is the number of terms in the coherent superposition of the remaining three-photon state*)
+      Terms = Cases[ReducedVV, _FF2, {0, Infinity}];
+      
+(*AllTypesOfFF2-4 is the number of different modes in the photons in path B,C,D, respectively.*)
+      AllTypesOfFF2 = 
+       DeleteDuplicates[Cases[ReducedVV, _FF2, {0, Infinity}]];
+      AllTypesOfFF3 = 
+       DeleteDuplicates[Cases[ReducedVV, _FF3, {0, Infinity}]];
+      AllTypesOfFF4 = 
+       DeleteDuplicates[Cases[ReducedVV, _FF4, {0, Infinity}]];
+      
+(*
+We want maximally entangled states. That means:
+     I) The number of terms has to be as large as max(AllTypesOfFF2,
+        AllTypesOfFF3,AllTypesOfFF4) 
+     II) The coefficients of all terms have to be the same. 
+        This garantees that the OAM-computation basis is the Schmidt basis. It is a restriction which makes analysation of the states much easier (but it would not be neccessary per se).
+*)
+      DimVecEncode = 
+       Sort[{Length[AllTypesOfFF2], Length[AllTypesOfFF3], 
+         Length[AllTypesOfFF4]}, Greater];
+      If[Length[Terms] > DimVecEncode[[1]], 
+       InfoLetter1 = "_MoreTerms", InfoLetter1 = "_OKTerms"]; 
+      If[NumberOfDiffCoef[ReducedVV] != 1, InfoLetter2 = "_NoMaxEnt", 
+       InfoLetter2 = "_MaxEnt"]; 
+      InfoLetter = InfoLetter1 <> InfoLetter2;
+      
+      
+(*We continue only if the state is indeed maximally entangled and genuinly 3-partite entangled. These are neccessary criteria, but not sufficient. However, we can get rid of many potential states here, thus do not have to calculate the time-consuming SchmidtRankVector function*)
+      If[(DimVecEncode[[3]] > 1 && InfoLetter == "_OKTerms_MaxEnt"),
+       
+(*After these initial checks, we calculate the very time-expensive SchmidtRankVector function*)
+       DimVec = SchmidtRankVector[ReducedVV];
+       
+(*Now we have the sufficient criteria: When the last entry of the 3-dimensional vector is one, it means that the state is bi-separable. We dont want that. Also if the number of terms does not coincide with the first entry of the SRV, we dont want to consider the state.*)
+       If[DimVec[[3]] > 1 && Length[Terms] == DimVec[[1]],
+        
+(*We found a good canditate state. However, we need to check whether higher-order terms from SPDC could be fatal for the state. We do that by calculating the same function with an 11-dimensional state (from -5 to +5). If the state does not change, we have a good state.*)
+        DCState = (DownConv[5, a, b] + DownConv[5, c, d])^2;
+        yyHO = Expand[ToExpression[FuncStr]];
+        vvHO = MakeFF2[yyHO];
+        ReducedVVHO = vvHO;
+        
+(*We only consider the space where the initial state was defined*)
+        For[mmHO = 1, mmHO <= Length[AllComb[[kkQ]]], mmHO++,
+         ReducedVVHO = ReducedVVHO /. AllComb[[kkQ]][[mmHO]] -> 1;
+         ];
+        ReducedVVHO = Block[{FF1}, FF1[l_] = 0; ReducedVVHO];
+        
+        AllTypesOfFF2Full = 
+         DeleteDuplicates[Cases[ReducedVVHO, _FF2, {0, Infinity}]];
+        AllTypesOfFF3Full = 
+         DeleteDuplicates[Cases[ReducedVVHO, _FF3, {0, Infinity}]];
+        AllTypesOfFF4Full = 
+         DeleteDuplicates[Cases[ReducedVVHO, _FF4, {0, Infinity}]];
+        
+        ComplementDC2 = Complement[AllTypesOfFF2Full, AllTypesOfFF2];
+        ComplementDC3 = Complement[AllTypesOfFF3Full, AllTypesOfFF3];
+        ComplementDC4 = Complement[AllTypesOfFF4Full, AllTypesOfFF4];
+        
+        For[mm = 1, mm <= Length[ComplementDC2], mm++,
+         ReducedVVHO = ReducedVVHO /. ComplementDC2[[mm]] -> 0;
+         ];
+        For[mm = 1, mm <= Length[ComplementDC3], mm++,
+         ReducedVVHO = ReducedVVHO /. ComplementDC3[[mm]] -> 0;
+         ];
+        For[mm = 1, mm <= Length[ComplementDC4], mm++,
+         ReducedVVHO = ReducedVVHO /. ComplementDC4[[mm]] -> 0;
+         ];
+        
+(*If the original state is the same as the higher-order state (i.e. the higher-orders do not disturb the created state) we have a good state, which we will report*)
+        If[ReducedVV == ReducedVVHO,
+         InformationString = 
+          ToString[DimVec] <> " | " <> SetupStr <> " | " <> 
+           ToString[AllComb[[kkQ]]] <> FromCharacterCode[{13, 10}];
+         WriteString[
+          directoryname <> "\\" <> ToString[DimVec] <> "_" <> 
+           ToString[iiNum] <> "_GT" <> ToString[$KernelID] <> ".txt", 
+          InformationString];
+         ]
+        ];
+       ];
+      ];
+     , 30];
+   , {iiLists, 1, Length[AllListNum]}];
+  iiCount = iiCount + SizeOfAllList;
+  Print["iiCount: " <> ToString[iiCount]];
+  Print[ToString[(AbsoluteTime[] - xxTime)] <> " sec."];
+  xxTime = AbsoluteTime[];
+  
+  ];
+

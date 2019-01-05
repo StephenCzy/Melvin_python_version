@@ -1,0 +1,60 @@
+(*
+First we define all the optical elements we can use in the lab. In this case, it is a small subset of elements for manipulating the polarisation of photons. All optical elements are described via symbol replacements, which is very convenient as one does not take care about the dimension or particle number of the system (i.e. no rescaling of any matrices).
+
+Here there we three simple examples how to use that kind of description:
+-> Hong-Ou-Mandel destructive interference
+-> Hong-Ou-Mandel constructive interference
+-> 4-photon GHZ generation in postselection
+*)
+
+DownConvPol[a_, b_] := (a[H]*b[H] + a[V]*b[V])
+HWP[expr_, a_] := expr /. {a[H] -> a[V], a[V] -> -a[H]}
+BSPol[expr_, a_, b_] := 
+ expr /. {a[p_] -> (b[p] + I*a[p])/Sqrt[2], 
+   b[p_] -> (a[p] + I*b[p])/Sqrt[2]}
+PBS[expr_, a_, b_] := 
+ expr /. {a[H] -> b[H], a[V] -> I*a[V], b[H] -> a[H], b[V] -> I*b[V]}
+
+(*Makes the four-fold post-selection*)
+MakeFF[expr_] := 
+ Expand[expr] /. {(a[l1_]*b[l2_]*c[l3_]*d[l4_]) -> 
+    FF1[l1]*FF2[l2]*FF3[l3]*FF4[l4], a[l1_]*a[l2_] -> 0, 
+   b[l3_]*b[l4_] -> 0, c[l5_]*c[l6_] -> 0, d[l7_]*d[l8_] -> 0, 
+   a[l1_]^n_ -> 0, b[l1_]^n_ -> 0, c[l1_]^n_ -> 0, d[l1_]^n_ -> 0}
+   
+(*
+We use a SPDC crystal which creates an entangled |phi+> state. Afterwards, we put a beam splitter. We will see Hong-Ou-Mandel interference (i.e. all photons in one the same output arm):  
+*)
+psi = DownConvPol[b, c]
+psi2 = Expand[BSPol[psi, b, c]]
+
+(*
+Now we again create a SPDC, and change put a polariser at 90\[Degree] in arm b, and add a phase of i in arm b, leading to a |psi-> state:
+*)
+psi = DownConvPol[a, b];
+psi2 = HWP[psi, a];
+psi3 = Expand[BSPol[psi2, a, b]]
+
+(*
+The resulting state has it's photons separated into two paths. This can be used as Bell-state measurement (because only in the case of the |psi->, the photons separate deterministically).
+
+Of course, the same can be acchieved in a sequence of function calls (it is used like that in the original program):
+*)
+
+psi3 = Expand[BSPol[HWP[DownConvPol[a, b], a], a, b]]
+
+(*
+The final example shows how the 4-photon Polarisation GHZ generation (using a PBS) can be described:
+*)
+
+(* SPDC happens in two crystals at the same time. The two crystals are in (a,b) and in (c,d) *)
+psi = DownConvPol[a, b]*
+   DownConvPol[c, 
+    d]; 
+
+(* 4-fold post selection means that we consider the state only when all four detectors in a,b,c,d click simultaneously*)
+psi2 = Expand[PBS[psi, b, c]];
+psi3 = MakeFF[psi2]
+
+   
+   
